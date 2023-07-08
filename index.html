@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.io Chat</title>
+    <style>
+      #chatForm {
+        display: flex;
+      }
+      #messageInput {
+        flex: 1;
+        margin-right: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Socket.io Chat</h1>
+
+    <div id="messages"></div>
+
+    <form id="chatForm">
+      <input type="text" id="messageInput" placeholder="Type your message" />
+      <button type="submit">Send</button>
+    </form>
+    <button id="exportButton">Export Chat</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+    <script>
+      const socket = io();
+      // Get the HTML elements
+      const messagesContainer = document.getElementById("messages");
+      const chatForm = document.getElementById("chatForm");
+      const usernameInput = document.getElementById("usernameInput");
+      const messageInput = document.getElementById("messageInput");
+      // On pressing the 'Send'
+      chatForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const message = messageInput.value.trim(); // Remove whitespace from input
+        // message is not empty, send the message
+        if (message !== "") {
+          socket.emit("chatMessage", message);
+          messageInput.value = "";
+        }
+      });
+      // When joining the website, ask user to set their user name
+      socket.on("connect", () => {
+        const username = prompt("Please enter your username");
+        socket.emit("setUsername", username);
+      });
+      // Display in chat, that the user joined the chat
+      socket.on("userJoined", (username) => {
+        const message = `${username} joined the chat`;
+        const messageElement = document.createElement("div");
+        messageElement.textContent = message;
+        messagesContainer.appendChild(messageElement);
+      });
+
+      socket.on("chatMessage", ({ username, message }) => {
+        // Format the message to user: message
+        const formattedMessage = `${username}: ${message}`;
+        // create a new div where the message is going to be stored
+        const messageElement = document.createElement("div");
+        // add the formatted message to the created div
+        messageElement.textContent = formattedMessage;
+        // append and display the div in the message div
+        messagesContainer.appendChild(messageElement);
+      });
+      // When user leaves, display that user has left the chat
+      socket.on("userLeft", (username) => {
+        const message = `${username} left the chat`;
+        const messageElement = document.createElement("div");
+        messageElement.textContent = message;
+        messagesContainer.appendChild(messageElement);
+      });
+      // MongoDB
+      const exportButton = document.getElementById("exportButton");
+      exportButton.addEventListener("click", () => {
+        exportChat();
+      });
+
+      function exportChat() {
+        const messages = Array.from(messagesContainer.children).map(
+          (messageElement) => {
+            return messageElement.textContent;
+          }
+        );
+
+        const chatData = JSON.stringify(messages, null, 2);
+
+        const downloadLink = document.createElement("a");
+        downloadLink.href = URL.createObjectURL(
+          new Blob([chatData], { type: "application/json" })
+        );
+        downloadLink.download = "chat-export.json";
+        downloadLink.click();
+      }
+    </script>
+  </body>
+</html>
